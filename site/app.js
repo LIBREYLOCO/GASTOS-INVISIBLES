@@ -22,9 +22,82 @@ function colIndex(headers,words){return headers.findIndex(h=>words.some(w=>h.inc
 function tabularToMovements(table,filename){let best=null;for(let i=0;i<Math.min(25,table.length);i++){const cols=(table[i]||[]).map(simplify);const date=colIndex(cols,['FECHA','DATE','F. OPER','F OPER','DIA']);const desc=colIndex(cols,['CONCEPTO','DESCRIP','DETAIL','MOVIMIENTO','COMERCIO','BENEFICIARIO','REFERENCIA']);const amount=colIndex(cols,['IMPORTE','MONTO','AMOUNT','TOTAL','VALOR']);const debit=colIndex(cols,['CARGO','DEBITO','DEBIT','RETIRO','SALIDA']);const credit=colIndex(cols,['ABONO','CREDITO','CREDIT','INGRESO']);const score=(date>=0?3:0)+(desc>=0?3:0)+(amount>=0?2:0)+(debit>=0?2:0);if(!best||score>best.score)best={i,date,desc,amount,debit,credit,score};}if(!best||best.score<6||best.date<0||best.desc<0||(best.amount<0&&best.debit<0))throw new Error('No se reconocen las columnas de fecha, concepto e importe en '+filename+'.');
 const out=[];for(const row of table.slice(best.i+1)){const date=parseDate(row[best.date]);const description=cleanText(row[best.desc]);const direct=best.debit>=0?numberValue(row[best.debit]):null;const amount=best.debit>=0&&direct!==null&&direct!==0?Math.abs(direct):best.debit>=0?(best.credit>=0?null:numberValue(row[best.amount])):numberValue(row[best.amount]);if(date&&description&&amount!==null&&Math.abs(amount)>0.001)out.push({date,description,amount,source:filename,cargoColumn:best.debit>=0});}
 return out;}
+
+// OCR local en el navegador para PDF de imagen. Reutiliza un trabajador por documento.
+function parseOcrLines(text, source) {
+  const lines=String(text||'').split(/\r?\n/).map(cleanText).filter(Boolean);
+  const rows=[];
+  const dateRe=/\b(\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}|\d{4}-\d{2}-\d{2})\b/;
+  const moneyRe=/(?<!\d)([-+]?\(?\s?(?:[$€])?\s?\d{1,3}(?:[., ]\d{3})*[.,]\d{2}\s?\)?|[-+]?\(?\s?(?:[$€])?\s?\d+[.,]\d{2}\s?\)?)(?!\d)/g;
+  // Agrupa fragmentos que suelen quedar repartidos en varias líneas por OCR.
+  let current='';
+  const blocks=[];
+  for(const line of lines){
+    if(dateRe.test(line)){
+      if(current)blocks.push(current);
+      current=line;
+    }else if(current){
+      current+=' '+line;
+    }
+  }
+  if(current)blocks.push(current);
+  const debitOnlyHeader=lines.some(x=>/FECHA|DATE/i.test(x)&&/CARGO|DEBITO|DÉBITO|DEBIT/i.test(x)&&!/ABONO|CREDITO|CRÉDITO|CREDIT/i.test(x));
+  for(const block of blocks){
+    const dateMatch=block.match(dateRe);
+    if(!dateMatch)continue;
+    const date=parseDate(dateMatch[1]);
+    if(!date)continue;
+    const rest=block.slice((dateMatch.index||0)+dateMatch[0].length).trim();
+    const amounts=[...rest.matchAll(moneyRe)];
+    if(!amounts.length)continue;
+    const hasBalance=/\b(?:SALDO|BALANCE)\b/i.test(rest);
+    const chosen=hasBalance&&amounts.length>1?amounts[amounts.length-2]:amounts[amounts.length-1];
+    const amount=numberValue(chosen[0]);
+    const description=cleanText(rest.slice(0,chosen.index).replace(/\s*[|:]\s*$/,''));
+    if(!description||amount===null||!Number.isFinite(amount)||Math.abs(amount)<.001)continue;
+    if(/^(?:SALDO|TOTAL|PAGINA|PÁGINA|NUMERO DE CUENTA|NÚMERO DE CUENTA)\b/i.test(description))continue;
+    rows.push({date,description,amount,source,cargoColumn:debitOnlyHeader,ocr:true});
+  }
+  return rows;
+}
+async function readPdfScanned(doc, filename){
+  if(!window.Tesseract)throw new Error('El lector OCR no pudo cargarse. Comprueba la conexión y vuelve a intentarlo.');
+  const limit=20;
+  if(doc.numPages>limit)throw new Error('Este PDF tiene más de 20 páginas. Para evitar un análisis incompleto, divide el documento en archivos de hasta 20 páginas.');
+  let worker;
+  const results=[];
+  try{
+    $('parser-status').textContent='Iniciando OCR del PDF escaneado. La primera vez puede descargar idiomas.';
+    worker=await window.Tesseract.createWorker('spa+eng',1,{logger:m=>{
+      if(m.status==='recognizing text'&&Number.isFinite(m.progress)){
+        $('parser-status').textContent='Reconociendo texto de PDF: '+Math.round(m.progress*100)+' % de la página actual';
+      }
+    }});
+    for(let p=1;p<=doc.numPages;p++){
+      $('parser-status').textContent='OCR: página '+p+' de '+doc.numPages+'. No cierres esta pestaña.';
+      const page=await doc.getPage(p);
+      const viewport=page.getViewport({scale:2});
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.ceil(viewport.width);
+      canvas.height=Math.ceil(viewport.height);
+      const ctx=canvas.getContext('2d',{alpha:false});
+      if(!ctx)throw new Error('No se pudo crear el área de OCR.');
+      await page.render({canvasContext:ctx,viewport}).promise;
+      const recognized=await worker.recognize(canvas);
+      results.push(...parseOcrLines(recognized.data?.text||'',filename+' / página '+p));
+      canvas.width=0;canvas.height=0;
+      page.cleanup();
+    }
+  }finally{
+    if(worker)await worker.terminate();
+  }
+  if(!results.length)throw new Error('El OCR terminó, pero no pudo identificar filas bancarias con fecha y cargo. No se ha importado nada. El formato puede requerir una adaptación específica.');
+  notify('PDF escaneado leído mediante OCR. Revisa cuidadosamente fechas, signos e importes antes de confirmar.');
+  return results;
+}
 async function readPdf(file){if(!window.pdfjsLib)throw new Error('No se ha cargado el lector PDF. Comprueba tu conexion y vuelve a intentarlo.');window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';const ab=await file.arrayBuffer();const doc=await window.pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;const lines=[];for(let p=1;p<=Math.min(doc.numPages,80);p++){const page=await doc.getPage(p);const content=await page.getTextContent();const items=content.items.filter(x=>x.str&&x.transform).map(x=>({text:x.str,x:x.transform[4],y:x.transform[5]})).sort((a,b)=>b.y-a.y||a.x-b.x);const groups=[];for(const x of items){let g=groups.find(g=>Math.abs(g.y-x.y)<3);if(!g){g={y:x.y,parts:[]};groups.push(g);}g.parts.push(x);}for(const g of groups)lines.push(g.parts.sort((a,b)=>a.x-b.x).map(p=>p.text).join(' ').replace(/\s+/g,' ').trim());}
 const debitOnlyHeader=lines.some(line=>/\b(?:FECHA|DATE)\b/i.test(line)&&/\b(?:CARGO|DEBITO|DÉBITO|DEBIT)\b/i.test(line)&&!/\b(?:ABONO|CREDITO|CRÉDITO|CREDIT)\b/i.test(line));const out=[];for(const line of lines){const m=line.match(/(?:^|\s)(\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4})\s+(.+)$/);if(!m)continue;const date=parseDate(m[1]);const content=m[2];const amounts=[...content.matchAll(/(?:^|\s)([-+]?\(?\s?(?:\$|\u20ac)?\s?\d[\d.,]*\s?\)?)(?=\s|$)/g)];if(!amounts.length)continue;let match=amounts[amounts.length-1];if(amounts.length>1&&/SALDO|BALANCE/i.test(content))match=amounts[amounts.length-2];const amount=numberValue(match[1]);const description=cleanText(content.slice(0,match.index));if(date&&description&&amount!==null)out.push({date,description,amount,source:file.name,cargoColumn:debitOnlyHeader});}
-if(!out.length)throw new Error('No pude leer movimientos de este PDF. Si esta escaneado, necesita OCR o una exportacion CSV/Excel.');return out;}
+if(!out.length)return readPdfScanned(doc,file.name);return out;}
 async function readFile(file){if(file.size>15*1024*1024)throw new Error(file.name+': supera el limite de 15 MB.');const name=file.name.toLowerCase();if(name.endsWith('.pdf'))return readPdf(file);if(name.endsWith('.csv'))return tabularToMovements(parseCSV(await file.text()),file.name);if(name.endsWith('.xlsx')||name.endsWith('.xls')){if(!window.XLSX)throw new Error('No se ha cargado el lector Excel. Comprueba tu conexion.');const book=window.XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});let results=[],errors=[];for(const sheet of book.SheetNames){const rows=window.XLSX.utils.sheet_to_json(book.Sheets[sheet],{header:1,defval:''});try{results=results.concat(tabularToMovements(rows,file.name+' / '+sheet));}catch(e){errors.push(e.message);}}if(!results.length)throw new Error(errors[0]||'No pude leer movimientos del Excel.');return results;}throw new Error('Formato no admitido: '+file.name);}
 function frequencyFromIntervals(intervals){const options=[['Semanal',7,52],['Quincenal',15,24],['Mensual',30.44,12],['Bimestral',60.9,6],['Trimestral',91.3,4],['Semestral',182.6,2],['Anual',365.25,1]];if(!intervals.length)return null;const sorted=[...intervals].sort((a,b)=>a-b),median=sorted[Math.floor(sorted.length/2)];let best=null;for(const item of options){const [label,days,perYear]=item;const diff=Math.abs(median-days);const limit=days<20?3:days<100?11:days<200?23:42;if(diff<=limit&&(!best||diff<best.diff))best={label,days,perYear,diff};}return best;}
 function daysBetween(a,b){return(Math.abs(new Date(b+'T00:00:00Z')-new Date(a+'T00:00:00Z')))/86400000;}
