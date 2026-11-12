@@ -1,45 +1,53 @@
-# Gastos invisibles - Beta web local v0.2
+# Gastos invisibles - Beta privada para Netlify
 
-App web (PWA) para iPhone y navegadores. Detecta pagos recurrentes de estados de cuenta PDF con texto, Excel XLS/XLSX y CSV, sin conectar bancos ni enviar los archivos a un backend.
+Aplicación PWA de prueba para detectar pagos recurrentes en estados de cuenta PDF con texto, PDF escaneados (OCR), XLSX, XLS y CSV. La interfaz está pensada para navegador y iPhone.
 
-## Como desplegar en Netlify
+## Estado comprobado
 
-1. En Netlify: Add new project > Import an existing project > GitHub.
-2. Selecciona `LIBREYLOCO/GASTOS-INVISIBLES`.
-3. Build command: vacio. Publish directory: `.` (raiz).
-4. Deploy. Abre la URL HTTPS resultante desde Safari iPhone y utiliza Compartir > Anadir a pantalla de inicio.
+- Código alojado en GitHub.
+- Login y control de sesiones implementados mediante Netlify Function y Edge Function; 7 pruebas locales de autenticación superadas.
+- Importador OCR y pruebas de interpretación con texto ficticio; el OCR completo con PDF escaneados y iPhone físico sigue pendiente de validación.
+- No hay URL Netlify verificada ni despliegue completado desde el asistente.
+- No hay Supabase asociado. Las transacciones permanecen en memoria del navegador.
 
-**No se ha conectado ni desplegado desde esta sesion de ChatGPT.** La URL debera verificarse tras la publicacion.
+## Despliegue con enlace HTTPS temporal
 
-## Privacidad y limites
+1. En https://app.netlify.com/start elige **Import an existing project** > **GitHub**.
+2. Selecciona `LIBREYLOCO/GASTOS-INVISIBLES` y rama `main`.
+3. Netlify debe tomar la configuración de `netlify.toml`:
+   - Directorio publicado: `site`.
+   - Compilación: validación de sintaxis JS.
+   - Netlify Function: `/auth`.
+   - Netlify Edge Function: `guard` con ruta `/*`.
+4. Antes de lanzar la beta, configura en **Site configuration > Environment variables** para funciones y Edge Functions:
+   - `GI_DEMO_EMAIL`: correo de prueba autorizado.
+   - `GI_DEMO_PASSWORD`: contraseña **nueva y exclusiva** de al menos 14 caracteres. No utilices contraseñas compartidas en conversaciones ni reutilizadas.
+   - `GI_SESSION_SECRET`: valor secreto aleatorio de al menos 32 caracteres (se recomienda 64). Guárdalo solo en las variables privadas de Netlify.
+5. Si Netlify ofrece protección adicional de **visibilidad privada / acceso restringido**, actívala y revisa los permisos sobre sitios de producción y vistas previas.
+6. Ejecuta el deploy y copia la dirección temporal HTTPS, aún sin dominio propio.
+7. Comprueba el aislamiento: sin sesión la raíz y `/app.js` deben redirigir a `/login.html`; credenciales incorrectas deben fallar; salir debe invalidar la cookie. Si faltan variables, debe mostrarse error 503, **no una aplicación abierta**.
+8. Sube únicamente `site/ejemplo.csv` y documentos bancarios inventados. Revisa la detección de recurrencias y las fechas/importes.
 
-- Se usan JavaScript y librerias de terceros servidas desde cdnjs y jsdelivr; no transmitimos los archivos bancarios deliberadamente, pero hay un riesgo de cadena de suministro por dependencias CDN. Para datos financieros reales, recomendamos empaquetar y auditar dependencias localmente antes de la distribucion comercial.
-- Los movimientos permanecen solo en memoria; recargar la pagina borra los resultados. No usar como archivo permanente ni subir datos no autorizados.
-- PDF escaneado sin texto no soportado en esta version de navegador (la beta Python v0.1 si admitia OCR).
-- El sistema no cancela suscripciones: presenta enlaces de ayuda para ciertos proveedores y seguimiento manual.
-- No hay cuentas ni sincronizacion Supabase. Se necesita un proyecto Supabase separado y politicas RLS validadas para activar persistencia y autenticacion comercial.
-- Esta beta no tiene controles multiusuario ni acceso restringido por cuenta: es un cliente estatico local, por tanto quien conozca el sitio puede abrirlo, pero no leer sesiones de otros usuarios.
-- Para producir un sistema comercial debe completarse evaluacion de privacidad, validacion de formatos reales, pruebas de seguridad, SRI o empaquetado de librerias, y pruebas en iPhone real.
+**No utilices todavía PDF bancarios reales.** La versión web actual carga herramientas JavaScript PDF/Excel/OCR desde CDN externos; su integridad, las solicitudes de red, el OCR completo, la seguridad y la privacidad aún requieren validación. Los resultados del OCR son orientativos y requieren revisión humana. No se solicita el acceso a bancos ni se cancelan servicios automáticamente.
 
-## Desarrollo local
+## Privacidad y limitaciones
 
-`python3 -m http.server 8080` y abre `http://localhost:8080`.
+- Los estados de cuenta se analizan en el dispositivo: no hay backend de almacenamiento de movimientos ni una cuenta Supabase conectada.
+- La aplicación puede necesitar descargar desde redes externas bibliotecas de lectura y archivos de idiomas OCR. Es un riesgo de cadena de suministro pendiente de auditoría.
+- Se limita el procesamiento OCR a 20 páginas por documento para evitar resultados parciales. Los PDF de algunos bancos pueden requerir adaptaciones de columnas.
+- Los movimientos quedan en memoria y desaparecen al cerrar o recargar la aplicación. Exporta el CSV antes de cerrar si necesitas conservar los hallazgos.
+- El ahorro potencial no equivale a una cancelación confirmada.
+- Solo se ha verificado la lógica básica localmente; hace falta probar la URL desplegada desde Chrome, Safari iPhone y un PDF escaneado ficticio.
 
-## Pruebas
+## Desarrollo y pruebas de acceso
 
-Importa `ejemplo.csv` con `signo: Cargos negativos` y comprueba Netflix/ChatGPT/Spotify. No hay datos reales.
+Desde una copia del repositorio, con Node.js:
 
-## Publicacion en Netlify desde el repositorio existente
+```bash
+node --check site/app.js
+node --check site/login.js
+node --check netlify/functions/auth.mjs
+node --check netlify/edge-functions/guard.js
+```
 
-Estado (12 de noviembre de 2026): el codigo de esta beta esta en `main` y ha pasado la prueba local de CSV de ejemplo. **No existe un despliegue Netlify verificado desde este proyecto.**
-
-Para enlazar la cuenta existente sin duplicar repositorios:
-
-1. Visitar https://app.netlify.com/start y elegir **Import an existing project**.
-2. Elegir GitHub y el repositorio `LIBREYLOCO/GASTOS-INVISIBLES`.
-3. Establecer rama `main`, **sin comando de build** y con directorio de publicación `.`.
-4. Mantener el proyecto **privado** para la beta; revisar también la visibilidad de los deploy previews.
-5. Hacer Deploy y verificar que la página abra con HTTPS y que el fichero ficticio `ejemplo.csv` detecte Netflix, ChatGPT y Spotify.
-6. En Safari de iPhone, seleccionar Compartir > Añadir a pantalla de inicio. Validar acceso, carga de archivos y cancelaciones en un dispositivo real.
-
-**No cargar estados bancarios reales todavía:** esta versión carga librerías de PDF y Excel desde CDN externos, no tiene autenticación ni persistencia, no admite OCR en PDF escaneados y no ha superado auditoría de seguridad, pruebas en Safari físico ni revisión de privacidad para producción. El sistema muestra enlaces de baja, pero nunca cancela servicios automáticamente.
+Los tests de autenticación se pueden ejecutar con `node --test` si se incorpora el archivo de pruebas.
