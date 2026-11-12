@@ -58,7 +58,7 @@
     <section class="page" id="cuenta"><div class="intro"><h2>Privacidad y control</h2><p>Esta beta funciona localmente en tu navegador y no solicita contrase&ntilde;as bancarias.</p></div>
       <div class="panel"><h3>Estado de tus datos</h3><p id="privacy-stats">0 movimientos en esta sesion.</p><p class="hint">Los movimientos y decisiones se mantienen solo en memoria mientras tengas esta pagina abierta. No utilizamos almacenamiento permanente, analitica ni cuentas de usuario en esta version. Al recargar o cerrar la pagina pueden perderse los resultados.</p><button class="danger" id="erase-data">Borrar toda la sesi&oacute;n</button></div>
       <div class="panel"><h3>Exportar hallazgos</h3><p class="hint">Descarga una hoja CSV con tus recurrencias para conservarla localmente.</p><button class="secondary" id="export-data">Descargar CSV</button></div>
-      <div class="panel"><h3>Limitaciones de la beta</h3><p class="hint">Los PDF escaneados sin texto requieren OCR (no incluido en esta edicion local). Las tablas con dise&ntilde;os bancarios complejos pueden necesitar un parser espec&iacute;fico. La deteccion es orientativa y no acredita contratos vigentes.</p></div>
+      <div class="panel"><h3>Limitaciones de la beta</h3><p class="hint">Los PDF escaneados se procesan mediante OCR en el navegador; revisa los cargos antes de confirmarlos. Las tablas con dise&ntilde;os bancarios complejos pueden necesitar un parser espec&iacute;fico. La deteccion es orientativa y no acredita contratos vigentes.</p></div>
     </section>
   </main>
   <nav class="mobile-nav" aria-label="Navegacion movil"><button data-page="inicio" class="active">&#9670;<small>Inicio</small></button><button data-page="importar">&#10514;<small>Importar</small></button><button data-page="gastos">&#9776;<small>Gastos</small></button><button data-page="ahorros">&#9734;<small>Ahorros</small></button><button data-page="cuenta">&#9881;<small>Cuenta</small></button></nav>
@@ -66,6 +66,7 @@
 <dialog id="detail"><button class="close" id="close-detail" aria-label="Cerrar">&times;</button><div id="detail-content"></div></dialog>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js" defer></script>
 <script src="/app.js" defer></script>
 </body>
 </html>
