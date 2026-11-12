@@ -37,6 +37,7 @@
       <div class="panel form-panel"><div class="grid-two"><label>Nombre de cuenta o tarjeta<input id="account" placeholder="Ej. Tarjeta personal" maxlength="50" value="Mi tarjeta"></label><label>Moneda<select id="currency"><option value="EUR">EUR - Euro</option><option value="MXN">MXN - Peso mexicano</option></select></label></div>
         <label class="upload" for="file-input"><span class="upload-icon">&#10514;</span><strong>Seleccionar PDF, Excel o CSV</strong><small>Puedes elegir varios archivos (m&aacute;ximo 15 MB por archivo)</small><input id="file-input" type="file" accept=".pdf,.xlsx,.xls,.csv,application/pdf" multiple></label>
         <div class="callout">Para reconocer un pago recurrente necesitamos, normalmente, dos o m&aacute;s movimientos separados en el tiempo. Recomendamos cargar de 6 a 15 meses.</div>
+        <p class="hint">Descarga datos ficticios para probar: <a href="/fixtures/ejemplo-ficticio.csv" download>CSV ficticio</a> · <a href="/fixtures/ejemplo-ficticio.xlsx" download>Excel ficticio</a> · <a href="/fixtures/ejemplo-ficticio.pdf" download>PDF ficticio</a>. Selecciona EUR y cargos negativos. Cada archivo contiene los mismos movimientos.</p>
         <p class="hint" id="parser-status">Preparado para recibir documentos.</p>
       </div>
       <div class="panel" id="preview-box" hidden><div class="panel-head"><h3>Revisa los movimientos</h3><span class="hint" id="preview-count"></span></div>
