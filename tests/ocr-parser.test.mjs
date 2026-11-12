@@ -3,7 +3,7 @@ import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
 import vm from 'node:vm';
 
-const code=readFileSync(new URL('../app.js', import.meta.url),'utf8');
+const code=readFileSync(new URL('../site/app.js', import.meta.url),'utf8');
 const helpers=code.slice(code.indexOf('function numberValue('),code.indexOf('function merchantAndCategory('));
 const parser=code.slice(code.indexOf('function parseOcrLines('),code.indexOf('async function readPdfScanned('));
 const extract=vm.runInNewContext(helpers+parser+'; parseOcrLines');

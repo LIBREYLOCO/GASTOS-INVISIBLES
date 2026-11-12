@@ -18,23 +18,25 @@
     <nav id="nav" aria-label="Navegacion">
       <button data-page="inicio" class="active"><span>&#9670;</span> Inicio</button>
       <button data-page="importar"><span>&#10514;</span> Importar</button>
-      <button data-page="gastos"><span>&#9776;</span> Gastos</button>
-      <button data-page="ahorros"><span>&#9734;</span> Ahorros</button>
+      <button data-page="gastos"><span>&#9776;</span> Suscripciones</button>
+      <button data-page="movimientos">Movimientos</button><button data-page="ahorros"><span>&#9734;</span> Seguimiento</button>
       <button data-page="cuenta"><span>&#9881;</span> Privacidad</button>
     </nav>
     <div class="side-bottom"><span class="green-dot"></span> Beta privada protegida<br><small>Sin conexion bancaria</small></div>
   </aside>
   <main class="main">
-    <header class="top"><div><div class="eyebrow">GASTOS INVISIBLES</div><h1 id="page-title">Tu dinero al descubierto</h1></div><div style="display:flex;gap:10px;align-items:center"><span class="private-pill">&#9679; Analisis local</span><button class="secondary" id="logout" type="button">Salir</button></div></header>
-    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <header class="top"><div><div class="eyebrow">GASTOS INVISIBLES</div><h1 id="page-title">Tu dinero al descubierto</h1></div><div class="top-actions"><span class="private-pill">&#9679; Analisis local</span><button class="secondary" id="logout" type="button">Salir</button></div></header>
+    <div class="session-bar"><span id="session-state"></span><button id="save-vault-top" class="secondary">Guardar historial cifrado</button></div><div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
     <section class="page active" id="inicio">
       <div class="hero"><div><p class="eyebrow mint">CONOCE TUS GASTOS</p><h2>Lo que no ves, tambi&eacute;n lo pagas.</h2><p>Importa tus estados de cuenta y descubre seguros, aplicaciones, servicios y membres&iacute;as que cobran de forma recurrente.</p><button class="primary" id="start-import">Analizar estado de cuenta &rarr;</button></div><div class="hero-icon">&#9681;</div></div>
-      <div class="grid-two" id="summary"><div class="panel stat"><span class="label">Pagos recurrentes</span><strong id="count-total">0</strong><small>Detectados por patrones de cobro</small></div><div class="panel stat"><span class="label">Cargos analizados</span><strong id="transaction-count">0</strong><small>Movimientos en esta sesion</small></div></div>
-      <div class="panel"><div class="panel-head"><h3>Proyecci&oacute;n anual por moneda</h3><span class="hint">No sumamos MXN y EUR</span></div><div id="yearly-totals" class="placeholder">Importa archivos para obtener tu an&aacute;lisis.</div></div>
+      <div class="grid-two" id="summary"><div class="panel stat"><span class="label">Pagos recurrentes</span><strong id="count-total">0</strong><small>Detectados por patrones de cobro</small></div><div class="panel stat"><span class="label">Cargos analizados</span><strong id="transaction-count">0</strong><small>Cargos en el historial</small></div></div>
+      <div class="panel stat"><span class="label">Por revisar</span><strong id="review-count">0</strong></div>
+      <div class="panel"><div class="panel-head"><h3>Proyecci&oacute;n anual por moneda</h3><span class="hint">No sumamos MXN y EUR</span></div><p id="candidate-summary" class="hint"></p><div id="yearly-totals" class="placeholder">Importa archivos para obtener tu an&aacute;lisis.</div></div>
       <div class="panel"><div class="panel-head"><h3>Hallazgos recientes</h3><button class="link" data-go="gastos">Ver todos &rarr;</button></div><div id="recent" class="placeholder">No hay gastos recurrentes detectados.</div></div>
+      <div class="grid-two"><div class="panel"><h3>Alertas de tus cargos</h3><div id="alerts"></div></div><div class="panel"><h3>Próximos cobros estimados</h3><div id="upcoming"></div></div></div>
     </section>
     <section class="page" id="importar">
-      <div class="intro"><h2>Importar estados de cuenta</h2><p>Los archivos se analizan en tu dispositivo. Esta beta no incorpora un servidor para guardar datos bancarios.</p><div class="callout"><strong>Beta tecnica para pruebas:</strong> usa solo movimientos ficticios o anonimizados. Los lectores de PDF y Excel se cargan de servicios externos y aun no se ha completado una auditoria de seguridad para documentos confidenciales.</div></div>
+      <div class="intro"><h2>Importar estados de cuenta</h2><p>Los archivos se analizan en tu dispositivo. Esta beta no incorpora un servidor para guardar datos bancarios.</p><div class="callout">PDF, Excel, CSV y OCR se procesan en este navegador con lectores incluidos en la aplicación. Revisa los movimientos antes de incorporarlos. La compatibilidad depende del formato del documento.</div></div>
       <div class="panel form-panel"><div class="grid-two"><label>Nombre de cuenta o tarjeta<input id="account" placeholder="Ej. Tarjeta personal" maxlength="50" value="Mi tarjeta"></label><label>Moneda<select id="currency"><option value="EUR">EUR - Euro</option><option value="MXN">MXN - Peso mexicano</option></select></label></div>
         <label class="upload" for="file-input"><span class="upload-icon">&#10514;</span><strong>Seleccionar PDF, Excel o CSV</strong><small>Puedes elegir varios archivos (m&aacute;ximo 15 MB por archivo)</small><input id="file-input" type="file" accept=".pdf,.xlsx,.xls,.csv,application/pdf" multiple></label>
         <div class="callout">Para reconocer un pago recurrente necesitamos, normalmente, dos o m&aacute;s movimientos separados en el tiempo. Recomendamos cargar de 6 a 15 meses.</div>
@@ -43,30 +45,30 @@
       <div class="panel" id="preview-box" hidden><div class="panel-head"><h3>Revisa los movimientos</h3><span class="hint" id="preview-count"></span></div>
         <div class="grid-two"><label>Interpretaci&oacute;n de signos<select id="sign-mode"><option value="auto">Autom&aacute;tica</option><option value="negative">Cargos negativos</option><option value="positive">Cargos positivos</option></select></label><label>Archivo / origen<input id="source-label" disabled></label></div>
         <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th class="right">Importe</th></tr></thead><tbody id="preview-rows"></tbody></table></div>
-        <div class="actions"><button class="primary" id="confirm-import">Confirmar importaci&oacute;n</button><button class="secondary" id="discard-import">Descartar</button></div>
+        <div id="coverage-warning" class="callout" hidden><p id="coverage-message"></p><label class="check-label"><input id="ack-coverage" type="checkbox">He revisado las páginas señaladas; entiendo que no se han leído movimientos en ellas.</label></div><div class="actions"><button class="primary" id="confirm-import">Confirmar importaci&oacute;n</button><button class="secondary" id="discard-import">Descartar</button></div>
       </div>
     </section>
     <section class="page" id="gastos">
       <div class="intro"><h2>Todos tus gastos recurrentes</h2><p>Cada resultado se basa en movimientos identificables. Abre un gasto para ver su historial y c&oacute;mo cancelarlo.</p></div>
-      <div class="panel"><div class="panel-head"><h3>Suscripciones, seguros y servicios</h3><span class="hint" id="expense-count">0 resultados</span></div><div id="expense-list" class="placeholder">Importa primero tus estados de cuenta.</div></div>
+      <div class="panel"><div class="panel-head"><h3>Suscripciones, seguros y servicios</h3><span class="hint" id="expense-count">0 resultados</span></div><div class="filters"><label>Buscar proveedor o concepto<input id="expense-search" type="search" placeholder="Netflix, seguro…"></label><label>Tipo<select id="kind-filter"><option value="">Todos</option><option>Suscripción</option><option>Servicio</option><option>Seguro</option><option>Comisión</option><option>Pago recurrente</option><option>Por identificar</option></select></label><label>Estado<select id="status-filter"><option value="active">Recurrentes activos</option><option value="all">Todos los hallazgos</option><option value="review">Por revisar</option><option value="candidates">Por confirmar</option><option value="canceled">Baja marcada</option><option value="not-recurring">Descartados</option></select></label><label>Orden<select id="expense-sort"><option value="cost">Coste</option><option value="next">Próximo cobro</option><option value="name">Nombre</option></select></label></div><div id="expense-list" class="placeholder">Importa primero tus estados de cuenta.</div></div>
     </section>
+    <section class="page" id="movimientos"><div class="intro"><h2>Los cargos detrás del análisis</h2><p>Abonos, saldos y pagos de tarjeta excluidos no se presentan como gasto.</p></div><div class="panel"><label>Buscar cargo, cuenta u origen<input id="movement-search" type="search"></label><p id="movement-count"></p><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Cuenta</th><th>Importe</th><th>Origen</th></tr></thead><tbody id="movement-rows"></tbody></table></div><p class="hint" id="movement-limit"></p></div></section>
     <section class="page" id="ahorros">
-      <div class="intro"><h2>Oportunidades de ahorro</h2><p>Una posibilidad de baja no significa que hayas cancelado ni que el ahorro sea real.</p></div>
-      <div class="panel"><div class="panel-head"><h3>Pagos marcados para cancelar</h3></div><div id="saving-list" class="placeholder">Marca un gasto como &laquo;solicitar baja&raquo; en su detalle para verlo aqu&iacute;.</div></div>
+      <div class="intro"><h2>Seguimiento de tus bajas</h2><p>Una posibilidad de baja no significa que hayas cancelado ni que el ahorro sea real.</p></div>
+      <div class="panel"><div class="panel-head"><h3>Solicitudes y bajas registradas</h3></div><div id="saving-list" class="placeholder">Marca un gasto como &laquo;solicitar baja&raquo; en su detalle para verlo aqu&iacute;.</div></div>
       <div class="panel"><h3>Seguimiento responsable</h3><p class="hint">Confirma la cancelaci&oacute;n con el proveedor y comprueba el siguiente estado de cuenta. Para seguros o contratos pueden aplicarse plazos y penalizaciones.</p></div>
     </section>
     <section class="page" id="cuenta"><div class="intro"><h2>Privacidad y control</h2><p>Esta beta funciona localmente en tu navegador y no solicita contrase&ntilde;as bancarias.</p></div>
-      <div class="panel"><h3>Estado de tus datos</h3><p id="privacy-stats">0 movimientos en esta sesion.</p><p class="hint">Los movimientos y decisiones se mantienen solo en memoria mientras tengas esta pagina abierta. No utilizamos almacenamiento permanente ni analitica. El acceso de demostracion usa una cookie segura y temporal. Al recargar o cerrar la pagina pueden perderse los resultados.</p><button class="danger" id="erase-data">Borrar toda la sesi&oacute;n</button></div>
-      <div class="panel"><h3>Exportar hallazgos</h3><p class="hint">Descarga una hoja CSV con tus recurrencias para conservarla localmente.</p><button class="secondary" id="export-data">Descargar CSV</button></div>
+      <div class="panel"><h3>Estado de tus datos</h3><p id="privacy-stats">0 movimientos en esta sesion.</p><p class="hint">Los movimientos y decisiones viven en memoria. Guarda un archivo cifrado para conservarlos y ábrelo en otra sesión. Sin esa copia, recargar o cerrar elimina el historial. No guardamos estados de cuenta en un servidor ni usamos analítica. El acceso privado utiliza una cookie temporal.</p><button class="danger" id="erase-data">Borrar toda la sesi&oacute;n</button></div>
+      <div class="panel"><h3>Tu historial, bajo tu control</h3><p>Guarda tus cargos y decisiones en un archivo cifrado con una frase de al menos 14 caracteres. Necesitarás el archivo y la frase para recuperarlos.</p><div class="actions"><button id="save-vault" class="primary">Guardar copia cifrada</button><label class="secondary vault-upload">Abrir copia cifrada<input type="file" id="vault-file" accept=".gi-vault,application/json"></label></div></div><div class="panel"><h3>Importaciones</h3><ul id="import-history" class="import-history"></ul></div><div class="panel"><h3>Exportar hallazgos</h3><p class="hint">Descarga una hoja CSV con tus recurrencias para conservarla localmente.</p><button class="secondary" id="export-data">Descargar CSV</button></div>
       <div class="panel"><h3>Limitaciones de la beta</h3><p class="hint">Los PDF escaneados se procesan mediante OCR en este navegador, con una descarga inicial de idioma. Los resultados necesitan revisión y pueden contener errores. Las tablas con dise&ntilde;os bancarios complejos pueden necesitar un parser espec&iacute;fico. La deteccion es orientativa y no acredita contratos vigentes.</p></div>
     </section>
   </main>
   <nav class="mobile-nav" aria-label="Navegacion movil"><button data-page="inicio" class="active">&#9670;<small>Inicio</small></button><button data-page="importar">&#10514;<small>Importar</small></button><button data-page="gastos">&#9776;<small>Gastos</small></button><button data-page="ahorros">&#9734;<small>Ahorros</small></button><button data-page="cuenta">&#9881;<small>Cuenta</small></button></nav>
 </div>
 <dialog id="detail"><button class="close" id="close-detail" aria-label="Cerrar">&times;</button><div id="detail-content"></div></dialog>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js" defer></script>
-<script src="/app.js" defer></script>
-</body>
-</html>
+<dialog id="vault-dialog"><button id="vault-close" class="close" aria-label="Cerrar">×</button><h2 id="vault-title"></h2><p id="vault-explanation"></p><form id="vault-form"><label>Frase de cifrado<input id="vault-password" type="password" autocomplete="off" required maxlength="1024"></label><label id="vault-confirm-label">Repite la frase<input id="vault-confirm" type="password" autocomplete="off" maxlength="1024"></label><label class="check-label"><input id="replace-session" type="checkbox">Acepto sustituir los cambios de esta sesión al abrir una copia</label><button id="vault-action" type="submit" class="primary"></button><p id="vault-status" role="alert"></p></form></dialog>
+<script src="/vendor/xlsx/xlsx.full.min.js" defer></script>
+<script src="/vendor/tesseract/tesseract.min.js" defer></script>
+<script src="/recurring.js?v=060" defer></script><script src="/vault.js?v=060" defer></script><script src="/product.js?v=060" defer></script><script src="/app.js?v=060" defer></script>
+</body></html>

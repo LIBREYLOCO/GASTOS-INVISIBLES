@@ -16,6 +16,7 @@
     for(const [id,value] of Object.entries(payload.decisions)){
       if(id.length>600||!plain(value)||dangerous(value)||!['pending','keep','investigate','cancel-requested','canceled','not-recurring'].includes(value.status))fail();
       const record={status:value.status};
+      if(value.anchor!==undefined){if(!text(value.anchor,1000))fail();record.anchor=value.anchor;}
       if(value.canceledAt!==undefined){if(!validDate(value.canceledAt))fail();record.canceledAt=value.canceledAt;}
       if(record.status==='canceled'&&!record.canceledAt)fail();
       if(value.name!==undefined){if(!text(value.name,80))fail();record.name=value.name;}

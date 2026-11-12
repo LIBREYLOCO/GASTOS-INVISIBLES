@@ -58,15 +58,17 @@
     const result=[];
     for(const group of groups.values())for(const series of splitSeries(group.items,group.info)){
       const items=[...series.items].sort((a,b)=>a.date.localeCompare(b.date)||a.amount-b.amount),m=group.info;
-      const cadence=cadenceFor(items),prices=items.map(x=>x.amount),middle=median(prices);
+      const cadence=cadenceFor(items),dateTotals=new Map();for(const item of items)dateTotals.set(item.date,(dateTotals.get(item.date)||0)+item.amount);const prices=[...dateTotals.values()],middle=median(prices);
       const deviation=median(prices.map(v=>Math.abs(v-middle)))/middle;
       if(!m.known&&(!cadence||items.length<3||deviation>.15))continue;
       if(!cadence&&items.length>1)continue;
-      const id=JSON.stringify([m.key,group.account,group.currency,series.key]);
-      const supplied=Object.hasOwn(decisions,id)?decisions[id]:null;
+      let id=JSON.stringify([m.key,group.account,group.currency,series.key]);
+      const anchored=Object.entries(decisions).find(([key,value])=>value&&typeof value.anchor==='string'&&items.some(item=>recordKey(item)===value.anchor));
+      if(anchored)id=anchored[0];
+      const supplied=anchored?anchored[1]:Object.hasOwn(decisions,id)?decisions[id]:null;
       const decision=supplied&&typeof supplied==='object'?supplied:{};
       const status=statuses.has(decision.status)?decision.status:'pending';
-      const last=items.at(-1),perYear=cadence?.perYear||0;
+      const last={...items.at(-1),amount:prices.at(-1)},perYear=cadence?.perYear||0;
       const confidence=!cadence?'Por confirmar':items.length>=3&&cadence.ratio>=.9&&deviation<=.15?'Alta':'Probable';
       const previous=prices.slice(0,-1),oldPrice=previous.length?median(previous):null;
       const stablePrevious=previous.length>=2&&previous.every(p=>Math.abs(p-oldPrice)/oldPrice<=.08);
@@ -79,6 +81,7 @@
       const reasons=[`${items.length} cargo${items.length===1?'':'s'} con evidencia en ${group.account}.`];
       if(cadence)reasons.push(`Patrón ${cadence.label.toLowerCase()} en fechas de cobro${cadence.missing?'; hay intervalos sin movimientos observados':''}.`);
       else reasons.push('Un solo cobro no demuestra una suscripción: falta otro período.');
+      if(items.length>dateTotals.size)reasons.push('Varios cargos en una misma fecha: se suma su importe y se conserva cada movimiento; verifica si corresponden a planes distintos.');
       if(m.kind==='Por identificar')reasons.push('El intermediario no identifica el servicio contratado. Revisa el recibo antes de atribuir una suscripción.');
       if(!m.known)reasons.push('Proveedor sin identificar: un pago periódico no acredita por sí solo una suscripción.');
       if(cadence&&deviation>.15)reasons.push('Los importes varían; revisa el contrato o el consumo.');
@@ -97,5 +100,5 @@
     }
     return {transactions,added,duplicates};
   }
-  return {analyze,mergeTransactions,merchant,validRecord,validDate,statuses:[...statuses]};
+  return {analyze,mergeTransactions,merchant,validRecord,validDate,evidenceKey:recordKey,statuses:[...statuses]};
 });

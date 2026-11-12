@@ -1,0 +1,19 @@
+{
+  "name": "gastos-invisibles",
+  "private": true,
+  "version": "0.6.0",
+  "scripts": {
+    "test": "node --test",
+    "build": "node tools/vendor.mjs && node --test && node --check site/app.js && node --check site/recurring.js && node --check site/vault.js && node --check site/product.js && node --check site/login.js && node --check netlify/functions/auth.mjs && node --check netlify/edge-functions/guard.js",
+    "dev": "python3 -m http.server 8743 --directory site"
+  },
+  "engines": {"node": ">=24"},
+  "dependencies": {
+    "@tesseract.js-data/eng": "1.0.0",
+    "@tesseract.js-data/spa": "1.0.0",
+    "pdfjs-dist": "6.5.438",
+    "tesseract.js": "7.0.0",
+    "tesseract.js-core": "7.0.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  }
+}

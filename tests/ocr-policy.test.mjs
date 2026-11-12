@@ -21,7 +21,5 @@ test('OCR can read its embedded WASM bytes without opening arbitrary network hos
   const connect = directives.get('connect-src');
   assert.ok(connect.includes('data:'), 'Tesseract fetches its embedded WASM from a data URL');
   assert.ok(!connect.includes('*'), 'Do not open arbitrary external connections');
-  assert.deepEqual(connect.filter(value => value.startsWith('https:')).sort(), [
-    'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com', 'https://tessdata.projectnaptha.com'
-  ]);
+  assert.deepEqual(connect.filter(value => value.startsWith('https:')), []);
 });

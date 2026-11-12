@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+const code=readFileSync(new URL('../site/app.js',import.meta.url),'utf8');
+const start=code.indexOf('function assertPdfCoverage('),end=code.indexOf('async function readPdf(file)',start);
+const check=start<0?null:vm.runInNewContext(code.slice(start,end)+';assertPdfCoverage');
+test('rechaza PDF mixto antes de importar solo sus páginas textuales',()=>{assert.equal(typeof check,'function');assert.throws(()=>check([120,0]),/mixto/i);assert.throws(()=>check([0,120]),/mixto/i);});
+test('permite todos los textos y deriva todos los escaneos al OCR',()=>{assert.equal(typeof check,'function');assert.doesNotThrow(()=>check([120,80]));assert.doesNotThrow(()=>check([0,0]));});
+const mark=vm.runInNewContext(code.slice(code.indexOf('function markPdfCoverage('),code.indexOf('async function readPdf(file)'))+';markPdfCoverage');
+test('página con encabezado textual pero cero movimientos exige advertencia explícita',()=>{const rows=mark(2,[{pdfPage:1}]);assert.match(rows.warnings[0],/2/);assert.match(rows.warnings[0],/escaneados/);assert.equal(mark(1,[{pdfPage:1}]).warnings,undefined);assert.match(code,/state.warnings.length&&!\$\('ack-coverage'\).checked/);});

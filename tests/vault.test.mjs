@@ -22,3 +22,4 @@ test('valida los registros y rechaza prototipos, fechas falsas e importes no fin
 test('valida límites de tamaño y estados de seguimiento sin inventar cancelaciones',()=>{
  assert.equal(typeof vault?.validate,'function');const many=payload();many.transactions=Array(20001).fill(many.transactions[0]);assert.throws(()=>vault.validate(many));const p=payload();p.decisions.x={status:'canceled'};assert.throws(()=>vault.validate(p));p.decisions.x={status:'canceled',canceledAt:'2026-03-01'};assert.equal(vault.validate(p).decisions.x.status,'canceled');
 });
+test('conserva anclaje de seguimiento al cifrar y abrir',async()=>{const p=payload();p.decisions.x={status:'canceled',canceledAt:'2026-02-01',anchor:'["cuenta","MXN","2026-01-05","NETFLIX",10000]'};const restored=await vault.open(await vault.seal(p,password),password);assert.equal(restored.decisions.x.anchor,p.decisions.x.anchor);});

@@ -22,3 +22,6 @@
 .DS_Store
 node_modules/
 .netlify/
+site/vendor/
+*.gi-vault
+*.har

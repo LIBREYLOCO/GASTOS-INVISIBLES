@@ -55,3 +55,12 @@ test('reimportación conserva dos cargos iguales legítimos, sin duplicarlos al 
 test('mismo cobro en otra cuenta o moneda sigue siendo distinto',()=>{
  assert.equal(typeof engine?.mergeTransactions,'function');const result=engine.mergeTransactions([],[tx('2026-01-05'),tx('2026-01-05','NETFLIX.COM',100,'Otra'),tx('2026-01-05','NETFLIX.COM',100,'Tarjeta ficticia','EUR')]);assert.equal(result.added,3);
 });
+test('conserva seguimiento al separar una segunda serie del intermediario',()=>{
+ const first=['2026-01-05','2026-02-05','2026-03-05'].map(d=>tx(d,'APPLE.COM/BILL',100));const [base]=analyze(first);
+ const decisions={[base.id]:{status:'canceled',canceledAt:'2026-03-10',anchor:engine.evidenceKey?engine.evidenceKey(first[0]):'unimplemented'}};
+ const rr=analyze([...first,tx('2026-04-05','APPLE.COM/BILL',100),...['2026-02-05','2026-03-05','2026-04-05'].map(d=>tx(d,'APPLE.COM/BILL',200))],decisions);
+ const r=rr.find(x=>x.typical===100);assert.equal(r.status,'canceled');assert.equal(r.chargedAfterCancellation,true);assert.equal(r.id,base.id);
+});
+test('proyecta multiplicidad de cargos iguales por fecha sin ocultar evidencia',()=>{
+ const rows=['2026-01-05','2026-02-05','2026-03-05'].flatMap(d=>[tx(d,'APPLE.COM/BILL'),tx(d,'APPLE.COM/BILL')]);const [r]=analyze(rows);assert.equal(r.items.length,6);assert.equal(r.monthly,200);assert.equal(r.yearly,2400);
+});
