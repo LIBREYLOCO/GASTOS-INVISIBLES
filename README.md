@@ -1,53 +1,40 @@
-# Gastos invisibles - Beta privada para Netlify
+# Gastos invisibles - Beta privada
 
-Aplicación PWA de prueba para detectar pagos recurrentes en estados de cuenta PDF con texto, PDF escaneados (OCR), XLSX, XLS y CSV. La interfaz está pensada para navegador y iPhone.
+Beta web para detectar pagos recurrentes de archivos PDF con texto, Excel XLS/XLSX y CSV. El análisis se realiza en memoria en el dispositivo; no hay conexión bancaria ni persistencia de movimientos.
 
-## Estado comprobado
+## Publicación verificada el 12 de noviembre de 2026
 
-- Código alojado en GitHub.
-- Login y control de sesiones implementados mediante Netlify Function y Edge Function; 7 pruebas locales de autenticación superadas.
-- Importador OCR y pruebas de interpretación con texto ficticio; el OCR completo con PDF escaneados y iPhone físico sigue pendiente de validación.
-- No hay URL Netlify verificada ni despliegue completado desde el asistente.
-- No hay Supabase asociado. Las transacciones permanecen en memoria del navegador.
+- URL: https://gastos-invisibles-beta.netlify.app
+- Proyecto Netlify: `gastos-invisibles-beta`.
+- Project ID: `71422b3f-e43c-47ce-862f-10c8706cb594`.
+- Repositorio: `LIBREYLOCO/GASTOS-INVISIBLES`, rama `main`.
+- Producción y Deploy Previews: **Private**, con acceso mediante la cuenta del equipo Netlify.
+- Una solicitud sin autenticación a la raíz devolvió HTTP 401. Chrome con la sesión del propietario abrió la aplicación.
+- El primer build se bloqueó deliberadamente antes de configurar la privacidad; después se publicó con comprobación de sintaxis `node --check app.js`.
+- No se modificaron otros proyectos ni se utilizaron datos bancarios reales.
 
-## Despliegue con enlace HTTPS temporal
+## Pruebas con datos ficticios
 
-1. En https://app.netlify.com/start elige **Import an existing project** > **GitHub**.
-2. Selecciona `LIBREYLOCO/GASTOS-INVISIBLES` y rama `main`.
-3. Netlify debe tomar la configuración de `netlify.toml`:
-   - Directorio publicado: `site`.
-   - Compilación: validación de sintaxis JS.
-   - Netlify Function: `/auth`.
-   - Netlify Edge Function: `guard` con ruta `/*`.
-4. Antes de lanzar la beta, configura en **Site configuration > Environment variables** para funciones y Edge Functions:
-   - `GI_DEMO_EMAIL`: correo de prueba autorizado.
-   - `GI_DEMO_PASSWORD`: contraseña **nueva y exclusiva** de al menos 14 caracteres. No utilices contraseñas compartidas en conversaciones ni reutilizadas.
-   - `GI_SESSION_SECRET`: valor secreto aleatorio de al menos 32 caracteres (se recomienda 64). Guárdalo solo en las variables privadas de Netlify.
-5. Si Netlify ofrece protección adicional de **visibilidad privada / acceso restringido**, actívala y revisa los permisos sobre sitios de producción y vistas previas.
-6. Ejecuta el deploy y copia la dirección temporal HTTPS, aún sin dominio propio.
-7. Comprueba el aislamiento: sin sesión la raíz y `/app.js` deben redirigir a `/login.html`; credenciales incorrectas deben fallar; salir debe invalidar la cookie. Si faltan variables, debe mostrarse error 503, **no una aplicación abierta**.
-8. Sube únicamente `site/ejemplo.csv` y documentos bancarios inventados. Revisa la detección de recurrencias y las fechas/importes.
+En Importar están disponibles archivos ficticios CSV, XLSX y PDF con los mismos movimientos. Usar EUR y cargos negativos.
 
-**No utilices todavía PDF bancarios reales.** La versión web actual carga herramientas JavaScript PDF/Excel/OCR desde CDN externos; su integridad, las solicitudes de red, el OCR completo, la seguridad y la privacidad aún requieren validación. Los resultados del OCR son orientativos y requieren revisión humana. No se solicita el acceso a bancos ni se cancelan servicios automáticamente.
+Los tres archivos pasaron las pruebas automatizadas de lectura y detección usando las funciones de `app.js` y los lectores correspondientes. Resultado por archivo: 10 movimientos leídos, 9 cargos, 3 recurrencias (Netflix, ChatGPT y Spotify), proyección de 575,76 EUR/año. El CSV también pasó la comprobación de duplicados y de escape de HTML. El PDF de prueba contiene texto; no es un escaneo.
 
-## Privacidad y limitaciones
+La prueba automatizada de PDF se ejecutó con el worker local equivalente a la misma versión de la dependencia. Estas pruebas no sustituyen las pruebas del selector de archivos y worker servido por HTTPS en cada navegador.
 
-- Los estados de cuenta se analizan en el dispositivo: no hay backend de almacenamiento de movimientos ni una cuenta Supabase conectada.
-- La aplicación puede necesitar descargar desde redes externas bibliotecas de lectura y archivos de idiomas OCR. Es un riesgo de cadena de suministro pendiente de auditoría.
-- Se limita el procesamiento OCR a 20 páginas por documento para evitar resultados parciales. Los PDF de algunos bancos pueden requerir adaptaciones de columnas.
-- Los movimientos quedan en memoria y desaparecen al cerrar o recargar la aplicación. Exporta el CSV antes de cerrar si necesitas conservar los hallazgos.
-- El ahorro potencial no equivale a una cancelación confirmada.
-- Solo se ha verificado la lógica básica localmente; hace falta probar la URL desplegada desde Chrome, Safari iPhone y un PDF escaneado ficticio.
+Chrome conectado: carga HTTPS y navegación verificadas; viewport de 390 x 844, ancho del documento 390, sin desbordamiento horizontal en Importar. La prueba de descarga y selección de archivos quedó interrumpida y después se perdió acceso al navegador. No se afirma validación completa de importación en Chrome.
 
-## Desarrollo y pruebas de acceso
+**Safari en iPhone real: pendiente.** No había un iPhone/Safari conectado. Una ventana estrecha de Chrome no equivale a Safari de iPhone.
 
-Desde una copia del repositorio, con Node.js:
+## Restricciones de seguridad
 
-```bash
-node --check site/app.js
-node --check site/login.js
-node --check netlify/functions/auth.mjs
-node --check netlify/edge-functions/guard.js
-```
+**Usar exclusivamente datos ficticios hasta completar la revisión de seguridad.** Los lectores PDF.js 3.11.174 y SheetJS 0.18.5 se cargan desde CDN externos. Todavía deben revisarse/actualizarse y empaquetarse las dependencias, verificarse los encabezados de seguridad efectivos y completarse pruebas de archivos malformados y de Safari real. No se ha completado una auditoría de seguridad y esta publicación no acredita aptitud para documentos bancarios reales.
 
-Los tests de autenticación se pueden ejecutar con `node --test` si se incorpora el archivo de pruebas.
+El repositorio de código conserva su visibilidad pública existente; la aplicación alojada y sus vistas previas están restringidas por Netlify. Nunca guardar archivos reales, secretos o credenciales en este repositorio.
+
+Los resultados se pierden al recargar. Los PDF escaneados sin texto no admiten OCR. La detección es orientativa. Los enlaces de baja ayudan a acudir al proveedor; la app no cancela suscripciones automáticamente.
+
+## Desarrollo
+
+`python3 -m http.server 8080`
+
+Publicación estática desde la raíz; Netlify ejecuta `node --check app.js`. Conservar la privacidad tanto de producción como de previews y no usar Make public para esta beta.
