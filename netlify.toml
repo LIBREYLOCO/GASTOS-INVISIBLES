@@ -1,6 +1,6 @@
 [build]
-  command = "node --check app.js"
-  publish = "."
+  command = "node --check site/app.js && node --check site/login.js && node --check netlify/functions/auth.mjs && node --check netlify/edge-functions/guard.js"
+  publish = "site"
 [[headers]]
   for = "/*"
   [headers.values]
@@ -10,6 +10,17 @@
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
     Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self'; img-src 'self' data:; connect-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 [[headers]]
-  for = "/service-worker.js"
+  for = "/login.html"
   [headers.values]
-    Cache-Control = "no-cache"
+    Cache-Control = "no-store"
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-store"
+[[headers]]
+  for = "/login.js"
+  [headers.values]
+    Cache-Control = "no-store"
+[[edge_functions]]
+  function = "guard"
+  path = "/*"
