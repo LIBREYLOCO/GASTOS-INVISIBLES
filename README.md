@@ -1,6 +1,6 @@
 # Gastos invisibles - Beta privada
 
-Beta web para detectar pagos recurrentes de archivos PDF con texto, Excel XLS/XLSX y CSV. El análisis se realiza en memoria en el dispositivo; no hay conexión bancaria ni persistencia de movimientos.
+Beta web para detectar pagos recurrentes de archivos PDF con texto, PDF escaneados mediante OCR, Excel XLS/XLSX y CSV. El análisis se realiza en memoria en el dispositivo; no hay conexión bancaria ni persistencia de movimientos.
 
 ## Publicación verificada el 12 de noviembre de 2026
 
@@ -21,7 +21,11 @@ Los tres archivos pasaron las pruebas automatizadas de lectura y detección usan
 
 La prueba automatizada de PDF se ejecutó con el worker local equivalente a la misma versión de la dependencia. Estas pruebas no sustituyen las pruebas del selector de archivos y worker servido por HTTPS en cada navegador.
 
-Chrome conectado: carga HTTPS y navegación verificadas; viewport de 390 x 844, ancho del documento 390, sin desbordamiento horizontal en Importar. La prueba de descarga y selección de archivos quedó interrumpida y después se perdió acceso al navegador. No se afirma validación completa de importación en Chrome.
+Verificación posterior del 12 de noviembre de 2026: en Chrome, sobre la URL HTTPS privada, el CSV y el PDF con texto pasaron el selector, vista previa y confirmación de importación con 10 movimientos, 9 cargos y 3 recurrencias.
+
+Corrección OCR publicada en `d139c97c594dedd3bba3376afb19496c8be4e831`: la CSP bloqueaba tanto la compilación WebAssembly como la lectura de los bytes WASM embebidos de Tesseract. Se permite únicamente `wasm-unsafe-eval` en `script-src` y `data:` en `connect-src`; siguen bloqueados JavaScript eval, scripts inline y hosts de conexión arbitrarios. Las cinco pruebas de `node --test` pasan y se ejecutan en cada build.
+
+En esa versión desplegada se verificó dos veces en Chrome un PDF ficticio de una página compuesto exclusivamente por imagen, sin texto extraíble. El OCR reconoció correctamente sus 10 fechas, conceptos e importes; al confirmar incorporó los 9 cargos y detectó Netflix, ChatGPT y Spotify, con 575,76 EUR/año. También se comprobó desde una sesión independiente que Netlify mantiene el sitio privado. Esto no valida todos los formatos bancarios, documentos malformados o escaneos de baja calidad. No se usaron extractos reales en estas pruebas.
 
 **Safari en iPhone real: pendiente.** No había un iPhone/Safari conectado. Una ventana estrecha de Chrome no equivale a Safari de iPhone.
 
@@ -31,10 +35,10 @@ Chrome conectado: carga HTTPS y navegación verificadas; viewport de 390 x 844, 
 
 El repositorio de código conserva su visibilidad pública existente; la aplicación alojada y sus vistas previas están restringidas por Netlify. Nunca guardar archivos reales, secretos o credenciales en este repositorio.
 
-Los resultados se pierden al recargar. Los PDF escaneados sin texto no admiten OCR. La detección es orientativa. Los enlaces de baja ayudan a acudir al proveedor; la app no cancela suscripciones automáticamente.
+Los resultados se pierden al recargar. Los PDF escaneados se procesan mediante OCR, con un máximo de 20 páginas por documento y revisión humana de fechas, signos e importes. La detección es orientativa. Los enlaces de baja ayudan a acudir al proveedor; la app no cancela suscripciones automáticamente.
 
 ## Desarrollo
 
 `python3 -m http.server 8080`
 
-Publicación estática desde la raíz; Netlify ejecuta `node --check app.js`. Conservar la privacidad tanto de producción como de previews y no usar Make public para esta beta.
+Netlify publica el directorio `site` con la Function `/auth` y la Edge Function `guard`. El build ejecuta `node --test` y las comprobaciones de sintaxis de la aplicación y las funciones. Conservar la privacidad tanto de producción como de previews y no usar Make public para esta beta.
