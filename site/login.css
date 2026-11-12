@@ -1,0 +1,17 @@
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color-scheme:light;--navy:#101e31;--mint:#34bea4}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:linear-gradient(135deg,#e8f6f3,#f7f8fb 65%,#e5eaf2);color:var(--navy);display:flex;align-items:center;justify-content:center;padding:24px}
+.login-shell{width:min(420px,100%)}
+.brand{display:flex;align-items:center;gap:13px;font-size:21px;margin:0 0 26px;font-weight:500}
+.brand img{background:#12283a;border-radius:12px;padding:7px}
+.panel{background:white;border-radius:22px;box-shadow:0 18px 65px rgba(9,25,47,.1);padding:35px 30px}
+.eyebrow{letter-spacing:.16em;font-size:11px;color:#248e81;font-weight:800}
+h1{font-size:32px;margin:12px 0 10px}
+p{line-height:1.6;color:#5e6978;font-size:14px;margin:0 0 20px}
+label{display:block;font-weight:650;font-size:13px;margin:16px 0 7px}
+input{width:100%;padding:14px;border:1px solid #cdd6df;border-radius:10px;font:inherit;background:#fff;color:#132033}
+input:focus-visible{outline:3px solid #9ceada;outline-offset:1px}
+button{margin-top:21px;width:100%;background:var(--navy);color:#fff;border:0;border-radius:11px;padding:15px;cursor:pointer;font-weight:700;font-size:15px}
+button:disabled{opacity:.65;cursor:wait}
+#status{min-height:24px;margin:13px 0 0;color:#a33226}
+.footnote{text-align:center;font-size:12px;margin-top:19px}
