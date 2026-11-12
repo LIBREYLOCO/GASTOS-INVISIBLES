@@ -33,7 +33,7 @@
       <div class="panel"><div class="panel-head"><h3>Hallazgos recientes</h3><button class="link" data-go="gastos">Ver todos &rarr;</button></div><div id="recent" class="placeholder">No hay gastos recurrentes detectados.</div></div>
     </section>
     <section class="page" id="importar">
-      <div class="intro"><h2>Importar estados de cuenta</h2><p>Los archivos se analizan en tu dispositivo. No se env&iacute;an al servidor ni se guardan en nuestra base de datos.</p></div>
+      <div class="intro"><h2>Importar estados de cuenta</h2><p>Los archivos se analizan en tu dispositivo. Esta beta no incorpora un servidor para guardar datos bancarios.</p><div class="callout"><strong>Beta tecnica para pruebas:</strong> usa solo movimientos ficticios o anonimizados. Los lectores de PDF y Excel se cargan de servicios externos y aun no se ha completado una auditoria de seguridad para documentos confidenciales.</div></div>
       <div class="panel form-panel"><div class="grid-two"><label>Nombre de cuenta o tarjeta<input id="account" placeholder="Ej. Tarjeta personal" maxlength="50" value="Mi tarjeta"></label><label>Moneda<select id="currency"><option value="EUR">EUR - Euro</option><option value="MXN">MXN - Peso mexicano</option></select></label></div>
         <label class="upload" for="file-input"><span class="upload-icon">&#10514;</span><strong>Seleccionar PDF, Excel o CSV</strong><small>Puedes elegir varios archivos (m&aacute;ximo 15 MB por archivo)</small><input id="file-input" type="file" accept=".pdf,.xlsx,.xls,.csv,application/pdf" multiple></label>
         <div class="callout">Para reconocer un pago recurrente necesitamos, normalmente, dos o m&aacute;s movimientos separados en el tiempo. Recomendamos cargar de 6 a 15 meses.</div>
