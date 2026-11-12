@@ -1,0 +1,24 @@
+# Never commit banking documents or credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.sqlite
+*.sqlite3
+*.db
+*.pdf
+*.PDF
+*.csv
+*.CSV
+*.xls
+*.xlsx
+*.zip
+*.7z
+*.tar
+*.tar.gz
+.DS_Store
+node_modules/
+.netlify/
