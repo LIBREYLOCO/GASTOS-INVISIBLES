@@ -59,6 +59,69 @@ function parseOcrLines(text, source) {
   }
   return rows;
 }
+function parseBankStatement(rows, source){
+  const fold=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const months={ene:1,enero:1,feb:2,febrero:2,mar:3,marzo:3,abr:4,abril:4,may:5,mayo:5,jun:6,junio:6,jul:7,julio:7,ago:8,agosto:8,sep:9,sept:9,septiembre:9,setiembre:9,oct:10,octubre:10,nov:11,noviembre:11,dic:12,diciembre:12};
+  const text=fold(rows.map(r=>r.text).join('\n'));
+  let start,end;
+  const numeric=text.match(/\bperiodo[^\n]*?\bdel\s+(\d{1,2}[/.\-]\d{1,2}[/.\-]\d{4})\s+al\s+(\d{1,2}[/.\-]\d{1,2}[/.\-]\d{4})/);
+  if(numeric){start=parseDate(numeric[1]);end=parseDate(numeric[2]);}
+  const words=text.match(/\bperiodo[^\n]*?\bdel\s+(\d{1,2})\s+de\s+(\w+)\s+al\s+(\d{1,2})\s+de\s+(\w+)\s+de\s+(\d{4})/);
+  if(!start&&words){
+    const a=months[words[2]],b=months[words[4]],year=+words[5];
+    if(a&&b){start=parseDate(`${words[1]}/${a}/${year-(a>b?1:0)}`);end=parseDate(`${words[3]}/${b}/${year}`);}
+  }
+  if(!start||!end||start>end)return [];
+  const datePrefix=/^(\d{1,2})(?:\s+de\s+|\s*[/\-]\s*)([A-Za-zÁÉÍÓÚáéíóú]+)\.?\b\s*/i;
+  const extractDate=value=>{
+    const match=value.match(datePrefix);if(!match)return null;
+    const month=months[fold(match[2])];if(!month)return null;
+    const candidates=[+start.slice(0,4),+end.slice(0,4)].map(y=>parseDate(`${match[1]}/${month}/${y}`)).filter(d=>d&&d>=start&&d<=end);
+    if(!candidates.length)return null;
+    return {date:candidates[0],rest:value.slice(match[0].length).trim()};
+  };
+  let columns=null,single=false,singleEdge=Infinity,lastOutputRow=-2;
+  const out=[];
+  for(let rowIndex=0;rowIndex<rows.length;rowIndex++){
+    const row=rows[rowIndex];
+    const line=cleanText(row.text),lower=fold(line);
+    if(/cargos/.test(lower)&&/abonos/.test(lower)&&/descripci/.test(lower)){
+      const find=word=>(row.parts||[]).find(p=>fold(p.text).trim()===word);
+      const debit=find('cargos'),credit=find('abonos');
+      const balance=(row.parts||[]).find(p=>/^operaci/.test(fold(p.text).trim()));
+      columns=debit&&credit&&balance?{debit,credit,balance}:null;single=false;continue;
+    }
+    if(/fecha.*detalle.*importe/.test(lower)){single=true;columns=null;singleEdge=(row.parts||[]).find(p=>/importe/i.test(p.text))?.x??Infinity;continue;}
+    if(!columns&&!single)continue;
+    if(single&&lastOutputRow===rowIndex-1&&rows[lastOutputRow].page===row.page&&(row.parts||[]).some(p=>/^CR$/i.test(p.text.trim())&&p.x>=singleEdge)){out[out.length-1].amount=Math.abs(out[out.length-1].amount);continue;}
+    const first=extractDate(line);if(!first)continue;
+    const second=extractDate(first.rest);
+    const rest=second?second.rest:first.rest;
+    let amount,description;
+    if(columns){
+      const edge=p=>p.x+(p.width||0);
+      const boundary=(edge(columns.debit)+edge(columns.credit))/2;
+      const limit=(edge(columns.credit)+edge(columns.balance))/2;
+      const money=(row.parts||[]).filter(p=>/^[-+]?\d[\d.,]*[.,]\d{2}$/.test(p.text.trim()));
+      const debit=money.filter(p=>edge(p)>columns.debit.x-15&&edge(p)<boundary);
+      const credit=money.filter(p=>edge(p)>=boundary&&edge(p)<limit);
+      if(debit.length+credit.length!==1)continue;
+      amount=Math.abs(numberValue((debit[0]||credit[0]).text))*(debit.length?-1:1);
+      let prefix=cleanText((row.parts||[]).filter(p=>p.x<columns.debit.x-15).map(p=>p.text).join(' '));
+      const a=extractDate(prefix);if(!a)continue;const b=extractDate(a.rest);
+      description=b?b.rest:a.rest;
+    }else{
+      const value=rest.match(/(?:^|\s)([-+]?\d[\d.,]*[.,]\d{2})(?:\s*(CR))?\s*$/i);
+      if(!value)continue;
+      amount=Math.abs(numberValue(value[1]))*(value[2]||value[1].startsWith('-')?1:-1);
+      description=cleanText(rest.slice(0,value.index));
+    }
+    if(!description||!Number.isFinite(amount)||Math.abs(amount)<.001)continue;
+    out.push({date:first.date,description,amount,source,cargoColumn:false});lastOutputRow=rowIndex;
+  }
+  return out;
+}
+
 async function readPdfScanned(doc, filename){
   if(!window.Tesseract)throw new Error('El lector OCR no pudo cargarse. Comprueba la conexión y vuelve a intentarlo.');
   const limit=20;
@@ -94,7 +157,8 @@ async function readPdfScanned(doc, filename){
   notify('PDF escaneado leído mediante OCR. Revisa cuidadosamente fechas, signos e importes antes de confirmar.');
   return results;
 }
-async function readPdf(file){if(!window.pdfjsLib)throw new Error('No se ha cargado el lector PDF. Comprueba tu conexion y vuelve a intentarlo.');window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';const ab=await file.arrayBuffer();const doc=await window.pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;const lines=[];for(let p=1;p<=Math.min(doc.numPages,80);p++){const page=await doc.getPage(p);const content=await page.getTextContent();const items=content.items.filter(x=>x.str&&x.transform).map(x=>({text:x.str,x:x.transform[4],y:x.transform[5]})).sort((a,b)=>b.y-a.y||a.x-b.x);const groups=[];for(const x of items){let g=groups.find(g=>Math.abs(g.y-x.y)<3);if(!g){g={y:x.y,parts:[]};groups.push(g);}g.parts.push(x);}for(const g of groups)lines.push(g.parts.sort((a,b)=>a.x-b.x).map(p=>p.text).join(' ').replace(/\s+/g,' ').trim());}
+async function readPdf(file){if(!window.pdfjsLib)throw new Error('No se ha cargado el lector PDF. Comprueba tu conexion y vuelve a intentarlo.');window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';const ab=await file.arrayBuffer();const doc=await window.pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;const lines=[],positioned=[];for(let p=1;p<=Math.min(doc.numPages,80);p++){const page=await doc.getPage(p);const content=await page.getTextContent();const items=content.items.filter(x=>x.str&&x.transform).map(x=>({text:x.str,x:x.transform[4],y:x.transform[5],width:x.width})).sort((a,b)=>b.y-a.y||a.x-b.x);const groups=[];for(const x of items){let g=groups.find(g=>Math.abs(g.y-x.y)<3);if(!g){g={y:x.y,parts:[]};groups.push(g);}g.parts.push(x);}for(const g of groups){g.parts.sort((a,b)=>a.x-b.x);const text=g.parts.map(p=>p.text).join(' ').replace(/\s+/g,' ').trim();lines.push(text);positioned.push({text,parts:g.parts,page:p});}}
+const bankRows=parseBankStatement(positioned,file.name);if(bankRows.length)return bankRows;
 const debitOnlyHeader=lines.some(line=>/\b(?:FECHA|DATE)\b/i.test(line)&&/\b(?:CARGO|DEBITO|DÉBITO|DEBIT)\b/i.test(line)&&!/\b(?:ABONO|CREDITO|CRÉDITO|CREDIT)\b/i.test(line));const out=[];for(const line of lines){const m=line.match(/(?:^|\s)(\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4})\s+(.+)$/);if(!m)continue;const date=parseDate(m[1]);const content=m[2];const amounts=[...content.matchAll(/(?:^|\s)([-+]?\(?\s?(?:\$|\u20ac)?\s?\d[\d.,]*\s?\)?)(?=\s|$)/g)];if(!amounts.length)continue;let match=amounts[amounts.length-1];if(amounts.length>1&&/SALDO|BALANCE/i.test(content))match=amounts[amounts.length-2];const amount=numberValue(match[1]);const description=cleanText(content.slice(0,match.index));if(date&&description&&amount!==null)out.push({date,description,amount,source:file.name,cargoColumn:debitOnlyHeader});}
 if(!out.length)return readPdfScanned(doc,file.name);return out;}
 async function readFile(file){if(file.size>15*1024*1024)throw new Error(file.name+': supera el limite de 15 MB.');const name=file.name.toLowerCase();if(name.endsWith('.pdf'))return readPdf(file);if(name.endsWith('.csv'))return tabularToMovements(parseCSV(await file.text()),file.name);if(name.endsWith('.xlsx')||name.endsWith('.xls')){if(!window.XLSX)throw new Error('No se ha cargado el lector Excel. Comprueba tu conexion.');const book=window.XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});let results=[],errors=[];for(const sheet of book.SheetNames){const rows=window.XLSX.utils.sheet_to_json(book.Sheets[sheet],{header:1,defval:''});try{results=results.concat(tabularToMovements(rows,file.name+' / '+sheet));}catch(e){errors.push(e.message);}}if(!results.length)throw new Error(errors[0]||'No pude leer movimientos del Excel.');return results;}throw new Error('Formato no admitido: '+file.name);}

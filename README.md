@@ -31,6 +31,12 @@ En esa versión desplegada se verificó dos veces en Chrome un PDF ficticio de u
 
 ## Restricciones de seguridad
 
+### Adaptación de formatos del 12 de noviembre de 2026
+
+El lector de texto PDF también reconoce fechas con mes escrito (`25 de Junio`) y fechas abreviadas sin año (`03/SEP`). El año se obtiene del período explícito del documento; no se adivina a partir de la fecha actual. En tablas de cargos, abonos y dos saldos se usa la posición de cada columna para separar débitos y créditos, sin importar los saldos como movimientos. En los estados de importe único se reconoce la marca `CR`, incluso en la línea inmediatamente siguiente.
+
+Se añadieron cinco pruebas de regresión con datos inventados para estos formatos, créditos, períodos entre diciembre y enero y rechazo de fechas fuera del período o sin año verificable. La lectura del PDF con texto utiliza esa estructura antes de recurrir al OCR. Los escaneos y otros diseños de tablas requieren su propia validación; esta adaptación no demuestra que todos los formatos bancarios estén cubiertos. Los documentos bancarios proporcionados se inspeccionan localmente y no se incorporan al repositorio ni a los fixtures públicos.
+
 **Usar exclusivamente datos ficticios hasta completar la revisión de seguridad.** Los lectores PDF.js 3.11.174 y SheetJS 0.18.5 se cargan desde CDN externos. Todavía deben revisarse/actualizarse y empaquetarse las dependencias, verificarse los encabezados de seguridad efectivos y completarse pruebas de archivos malformados y de Safari real. No se ha completado una auditoría de seguridad y esta publicación no acredita aptitud para documentos bancarios reales.
 
 El repositorio de código conserva su visibilidad pública existente; la aplicación alojada y sus vistas previas están restringidas por Netlify. Nunca guardar archivos reales, secretos o credenciales en este repositorio.
