@@ -28,3 +28,18 @@ App web (PWA) para iPhone y navegadores. Detecta pagos recurrentes de estados de
 ## Pruebas
 
 Importa `ejemplo.csv` con `signo: Cargos negativos` y comprueba Netflix/ChatGPT/Spotify. No hay datos reales.
+
+## Publicacion en Netlify desde el repositorio existente
+
+Estado (12 de noviembre de 2026): el codigo de esta beta esta en `main` y ha pasado la prueba local de CSV de ejemplo. **No existe un despliegue Netlify verificado desde este proyecto.**
+
+Para enlazar la cuenta existente sin duplicar repositorios:
+
+1. Visitar https://app.netlify.com/start y elegir **Import an existing project**.
+2. Elegir GitHub y el repositorio `LIBREYLOCO/GASTOS-INVISIBLES`.
+3. Establecer rama `main`, **sin comando de build** y con directorio de publicación `.`.
+4. Mantener el proyecto **privado** para la beta; revisar también la visibilidad de los deploy previews.
+5. Hacer Deploy y verificar que la página abra con HTTPS y que el fichero ficticio `ejemplo.csv` detecte Netflix, ChatGPT y Spotify.
+6. En Safari de iPhone, seleccionar Compartir > Añadir a pantalla de inicio. Validar acceso, carga de archivos y cancelaciones en un dispositivo real.
+
+**No cargar estados bancarios reales todavía:** esta versión carga librerías de PDF y Excel desde CDN externos, no tiene autenticación ni persistencia, no admite OCR en PDF escaneados y no ha superado auditoría de seguridad, pruebas en Safari físico ni revisión de privacidad para producción. El sistema muestra enlaces de baja, pero nunca cancela servicios automáticamente.
